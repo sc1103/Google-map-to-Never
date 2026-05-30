@@ -364,33 +364,24 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Card Header with Name
+                        // Card Header with Status & Badges
                         Row(
-                            verticalAlignment = Alignment.Top,
+                            verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Place,
-                                        contentDescription = "Place Pin",
-                                        tint = if (location.isKoreanLocation) NaverGreen else GoogleBlue,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "解析到的地點名稱",
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = "Place Pin",
+                                    tint = if (location.isKoreanLocation) NaverGreen else GoogleBlue,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = location.placeName.ifBlank { "未知名稱" },
+                                    text = "已解析位置數據",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp,
+                                    fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
@@ -414,23 +405,34 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                             }
                         }
 
-                        // Address if available
-                        if (location.address.isNotEmpty()) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                            Column {
-                                Text(
-                                    text = "地址",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = location.address,
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        // Editable Place Name Field
+                        OutlinedTextField(
+                            value = location.placeName,
+                            onValueChange = { viewModel.updatePlaceName(it) },
+                            label = { Text("地點名稱 (可自由搜尋與編輯修改 ✏️)", fontSize = 11.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            textStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (location.isKoreanLocation) NaverGreen else GoogleBlue,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                            )
+                        )
+
+                        // Editable Address Field
+                        OutlinedTextField(
+                            value = location.address,
+                            onValueChange = { viewModel.updateAddress(it) },
+                            label = { Text("地址 (可自由搜尋與編輯修改 ✏️)", fontSize = 11.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = TextStyle(fontSize = 14.sp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (location.isKoreanLocation) NaverGreen else GoogleBlue,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                            )
+                        )
 
                         // Coordinates if available
                         if (location.latitude != null && location.longitude != null) {

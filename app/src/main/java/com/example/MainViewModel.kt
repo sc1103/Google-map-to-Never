@@ -103,6 +103,59 @@ class MainViewModel : ViewModel() {
         _isResolving.value = false
     }
 
+    fun updatePlaceName(name: String) {
+        _parsedLocation.value = _parsedLocation.value?.copy(placeName = name)
+    }
+
+    fun updateAddress(address: String) {
+        _parsedLocation.value = _parsedLocation.value?.copy(address = address)
+    }
+
+    /**
+     * Helper to clean up names or queries for Naver Map search and route names.
+     * Extracts only Korean (Hangul) characters, spaces, and digits if the input contained Hangul.
+     * If no Hangul is detected, returns the original string as fallback.
+     */
+    private fun cleanNameForNaver(input: String): String {
+        if (input.isBlank()) return input
+
+        // Helper to check if a character belongs to any Hangul ranges
+        fun isHangul(c: Char): Boolean {
+            val codePoint = c.code
+            return (codePoint in 0xAC00..0xD7A3) || // Hangul Syllables
+                   (codePoint in 0x1100..0x11FF) || // Hangul Jamo
+                   (codePoint in 0x3130..0x318F) || // Hangul Compatibility Jamo
+                   (codePoint in 0xA960..0xA97F) || // Hangul Jamo Extended-A
+                   (codePoint in 0xD7B0..0xD7FF)    // Hangul Jamo Extended-B
+        }
+
+        // Check if the input string contains any Hangul characters
+        var hasHangul = false
+        for (char in input) {
+            if (isHangul(char)) {
+                hasHangul = true
+                break
+            }
+        }
+
+        // If it contains Korean, keep only Hangul characters, digits, and spaces
+        if (hasHangul) {
+            val sb = StringBuilder()
+            for (char in input) {
+                if (isHangul(char) || char.isDigit() || char == ' ') {
+                    sb.append(char)
+                }
+            }
+            val cleaned = sb.toString().replace(Regex("\\s+"), " ").trim()
+            if (cleaned.isNotEmpty()) {
+                return cleaned
+            }
+        }
+
+        // Fallback to original input if no Korean or if cleaned string is empty
+        return input
+    }
+
     /**
      * Builds URI schemes for Naver Map
      * Mode: "car" (Navigation/Driving), "walk" (Walking), "bus" (Transit)
@@ -114,12 +167,15 @@ class MainViewModel : ViewModel() {
         if (location.latitude != null && location.longitude != null) {
             // Direct Route Scheme
             // Format: nmap://route/{mode}?dlat={dlat}&dlng={dlng}&dname={dname}&appname=com.example
-            val encodedName = Uri.encode(location.placeName)
+            val cleanedName = cleanNameForNaver(location.placeName)
+            val encodedName = Uri.encode(cleanedName)
             urlScheme = "nmap://route/$mode?dlat=${location.latitude}&dlng=${location.longitude}&dname=$encodedName&appname=${context.packageName}"
         } else {
             // Text Search Scheme
             // Format: nmap://search?query={query}&appname=com.example
-            val queryParam = Uri.encode(location.placeName.ifEmpty { location.address })
+            val rawQuery = location.placeName.ifEmpty { location.address }
+            val cleanedQuery = cleanNameForNaver(rawQuery)
+            val queryParam = Uri.encode(cleanedQuery)
             urlScheme = "nmap://search?query=$queryParam&appname=${context.packageName}"
         }
 
@@ -153,7 +209,9 @@ class MainViewModel : ViewModel() {
             "https://map.naver.com/v5/entry/address/${location.latitude},${location.longitude}"
         } else {
             // Web search fallback
-            val querySegment = Uri.encode(location.placeName.ifEmpty { location.address })
+            val rawQuery = location.placeName.ifEmpty { location.address }
+            val cleanedQuery = cleanNameForNaver(rawQuery)
+            val querySegment = Uri.encode(cleanedQuery)
             "https://map.naver.com/v5/search/$querySegment"
         }
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(webUrl))
